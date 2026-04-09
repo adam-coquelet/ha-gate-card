@@ -6,17 +6,17 @@ export const sharedStyles = `
     background: var(--card-background-color, #fff);
     border-radius: 12px;
     border: 1px solid var(--divider-color, #eaeaea);
-    padding: 20px;
+    padding: 14px 20px 16px;
     font-family: var(--ha-card-header-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
   }
-  .card.compact { padding: 16px; }
+  .card.compact { padding: 10px 16px 12px; }
 
   /* Header */
   .header {
     display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
-  .compact .header { margin-bottom: 12px; }
+  .compact .header { margin-bottom: 10px; }
 
   .title {
     font-size: 13px; font-weight: 500; letter-spacing: -0.01em;
