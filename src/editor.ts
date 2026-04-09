@@ -7,14 +7,26 @@ const SIDES = ["left", "right"] as const;
 export class GateCardEditor extends HTMLElement {
   private _config!: GateCardConfig;
   private _hass!: HomeAssistant;
+  private _rendered = false;
 
   set hass(hass: HomeAssistant) {
     this._hass = hass;
+    // Push hass to all entity pickers already in the DOM
+    this.querySelectorAll("ha-entity-picker").forEach((el) => {
+      (el as unknown as Record<string, unknown>).hass = hass;
+    });
   }
 
   setConfig(config: GateCardConfig): void {
     this._config = { ...config };
+    this._rendered = false;
     this._render();
+  }
+
+  connectedCallback(): void {
+    if (!this._rendered && this._config) {
+      this._render();
+    }
   }
 
   private get _lang(): string {
@@ -22,160 +34,141 @@ export class GateCardEditor extends HTMLElement {
   }
 
   private _render(): void {
+    if (!this._config) return;
     const lang = this._lang;
     const gateType = this._config.gate_type || "double_swing";
 
-    this.innerHTML = `
+    this.innerHTML = "";
+
+    const form = document.createElement("div");
+    form.className = "editor-form";
+    form.innerHTML = `
       <style>
         .editor-form { display: flex; flex-direction: column; gap: 16px; padding: 8px 0; }
         ha-entity-picker, ha-select, ha-textfield { width: 100%; }
         .switch-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
         .switch-row span { font-size: 14px; color: var(--primary-text-color); }
       </style>
-      <div class="editor-form">
-        <ha-textfield
-          label="${t("editor.title", lang)}"
-          class="cfg-title"
-        ></ha-textfield>
-
-        <ha-entity-picker
-          class="cfg-entity"
-          allow-custom-entity
-        ></ha-entity-picker>
-
-        <ha-select
-          label="${t("editor.gate_type", lang)}"
-          class="cfg-gate-type"
-        >
-          ${GATE_TYPES.map(
-            (gt) =>
-              `<mwc-list-item value="${gt}" ${gt === gateType ? "selected" : ""}>${t("gate_types." + gt, lang)}</mwc-list-item>`,
-          ).join("")}
-        </ha-select>
-
-        ${
-          gateType === "double_swing"
-            ? `
-          <ha-entity-picker class="cfg-entity-left" allow-custom-entity></ha-entity-picker>
-          <ha-entity-picker class="cfg-entity-right" allow-custom-entity></ha-entity-picker>
-        `
-            : ""
-        }
-
-        ${
-          gateType === "single_swing"
-            ? `
-          <ha-select label="${t("editor.swing_side", lang)}" class="cfg-swing-side">
-            ${SIDES.map(
-              (s) =>
-                `<mwc-list-item value="${s}" ${s === (this._config.swing_side || "left") ? "selected" : ""}>${t("editor." + s, lang)}</mwc-list-item>`,
-            ).join("")}
-          </ha-select>
-        `
-            : ""
-        }
-
-        ${
-          gateType === "sliding"
-            ? `
-          <ha-select label="${t("editor.slide_direction", lang)}" class="cfg-slide-dir">
-            ${SIDES.map(
-              (s) =>
-                `<mwc-list-item value="${s}" ${s === (this._config.slide_direction || "right") ? "selected" : ""}>${t("editor." + s, lang)}</mwc-list-item>`,
-            ).join("")}
-          </ha-select>
-        `
-            : ""
-        }
-
-        <ha-select label="${t("editor.language", lang)}" class="cfg-language">
-          <mwc-list-item value="auto" ${this._lang === "auto" ? "selected" : ""}>${t("editor.auto", lang)}</mwc-list-item>
-          <mwc-list-item value="fr" ${this._lang === "fr" ? "selected" : ""}>Français</mwc-list-item>
-          <mwc-list-item value="en" ${this._lang === "en" ? "selected" : ""}>English</mwc-list-item>
-        </ha-select>
-
-        <div class="switch-row">
-          <span>${t("editor.compact", lang)}</span>
-          <ha-switch class="cfg-compact"></ha-switch>
-        </div>
-      </div>
     `;
+    this.appendChild(form);
 
-    this._bindFields();
+    // Title
+    const titleEl = document.createElement("ha-textfield") as HTMLInputElement;
+    titleEl.setAttribute("label", t("editor.title", lang));
+    titleEl.value = this._config.title || "";
+    titleEl.addEventListener("input", () => this._update("title", titleEl.value));
+    form.appendChild(titleEl);
+
+    // Main entity
+    this._addEntityPicker(form, "entity", this._config.entity);
+
+    // Gate type
+    const gateTypeEl = document.createElement("ha-select");
+    gateTypeEl.setAttribute("label", t("editor.gate_type", lang));
+    for (const gt of GATE_TYPES) {
+      const item = document.createElement("mwc-list-item");
+      item.setAttribute("value", gt);
+      if (gt === gateType) item.setAttribute("selected", "");
+      item.textContent = t("gate_types." + gt, lang);
+      gateTypeEl.appendChild(item);
+    }
+    gateTypeEl.addEventListener("selected", (e: Event) => {
+      const target = e.target as HTMLElement & { value?: string };
+      if (target.value && target.value !== this._config.gate_type) {
+        this._update("gate_type", target.value);
+      }
+    });
+    // Also listen for closed (ha-select fires this after selection)
+    gateTypeEl.addEventListener("closed", (e: Event) => e.stopPropagation());
+    form.appendChild(gateTypeEl);
+
+    // Double swing: left/right entity pickers
+    if (gateType === "double_swing") {
+      this._addEntityPicker(form, "entity_left", this._config.entity_left);
+      this._addEntityPicker(form, "entity_right", this._config.entity_right);
+    }
+
+    // Single swing: swing side
+    if (gateType === "single_swing") {
+      this._addSelect(form, "swing_side", this._config.swing_side || "left", SIDES, lang);
+    }
+
+    // Sliding: direction
+    if (gateType === "sliding") {
+      this._addSelect(form, "slide_direction", this._config.slide_direction || "right", SIDES, lang);
+    }
+
+    // Language
+    const langEl = document.createElement("ha-select");
+    langEl.setAttribute("label", t("editor.language", lang));
+    for (const [val, label] of [["auto", t("editor.auto", lang)], ["fr", "Français"], ["en", "English"]]) {
+      const item = document.createElement("mwc-list-item");
+      item.setAttribute("value", val);
+      if (val === (this._config.language || "auto")) item.setAttribute("selected", "");
+      item.textContent = label;
+      langEl.appendChild(item);
+    }
+    langEl.addEventListener("selected", (e: Event) => {
+      const target = e.target as HTMLElement & { value?: string };
+      if (target.value) this._update("language", target.value);
+    });
+    langEl.addEventListener("closed", (e: Event) => e.stopPropagation());
+    form.appendChild(langEl);
+
+    // Compact
+    const switchRow = document.createElement("div");
+    switchRow.className = "switch-row";
+    const switchLabel = document.createElement("span");
+    switchLabel.textContent = t("editor.compact", lang);
+    switchRow.appendChild(switchLabel);
+    const switchEl = document.createElement("ha-switch") as HTMLInputElement;
+    if (this._config.compact) switchEl.setAttribute("checked", "");
+    switchEl.addEventListener("change", () => {
+      this._update("compact", (switchEl as unknown as Record<string, unknown>).checked);
+    });
+    switchRow.appendChild(switchEl);
+    form.appendChild(switchRow);
+
+    this._rendered = true;
   }
 
-  private _bindFields(): void {
-    const $ = <T extends HTMLElement>(sel: string): T | null =>
-      this.querySelector<T>(sel);
-
-    const titleEl = $<HTMLInputElement>(".cfg-title");
-    if (titleEl) {
-      titleEl.value = this._config.title || "";
-      titleEl.addEventListener("input", () =>
-        this._update("title", titleEl.value),
-      );
-    }
-
-    this._bindEntityPicker(".cfg-entity", "entity", this._config.entity);
-
-    const gateTypeEl = $(".cfg-gate-type");
-    if (gateTypeEl) {
-      gateTypeEl.addEventListener("selected", (e: Event) => {
-        const val = (e.target as HTMLSelectElement & { value: string }).value;
-        if (val && val !== this._config.gate_type) {
-          this._update("gate_type", val);
-        }
-      });
-    }
-
-    this._bindEntityPicker(".cfg-entity-left", "entity_left", this._config.entity_left);
-    this._bindEntityPicker(".cfg-entity-right", "entity_right", this._config.entity_right);
-
-    const swingSideEl = $(".cfg-swing-side");
-    if (swingSideEl) {
-      swingSideEl.addEventListener("selected", (e: Event) => {
-        const val = (e.target as HTMLSelectElement & { value: string }).value;
-        if (val) this._update("swing_side", val);
-      });
-    }
-
-    const slideDirEl = $(".cfg-slide-dir");
-    if (slideDirEl) {
-      slideDirEl.addEventListener("selected", (e: Event) => {
-        const val = (e.target as HTMLSelectElement & { value: string }).value;
-        if (val) this._update("slide_direction", val);
-      });
-    }
-
-    const langEl = $(".cfg-language");
-    if (langEl) {
-      langEl.addEventListener("selected", (e: Event) => {
-        const val = (e.target as HTMLSelectElement & { value: string }).value;
-        if (val) this._update("language", val);
-      });
-    }
-
-    const compactEl = $<HTMLInputElement>(".cfg-compact");
-    if (compactEl) {
-      compactEl.checked = !!this._config.compact;
-      compactEl.addEventListener("change", () =>
-        this._update("compact", compactEl.checked),
-      );
-    }
-  }
-
-  private _bindEntityPicker(selector: string, key: string, value?: string): void {
-    const el = this.querySelector(selector) as HTMLElement | null;
-    if (!el) return;
+  private _addEntityPicker(parent: HTMLElement, key: string, value?: string): void {
+    const el = document.createElement("ha-entity-picker");
     const anyEl = el as unknown as Record<string, unknown>;
     anyEl.hass = this._hass;
     anyEl.value = value || "";
     anyEl.label = t("editor." + key, this._lang);
     anyEl.includeDomains = ["cover"];
+    anyEl.allowCustomEntity = true;
     el.addEventListener("value-changed", (e: Event) => {
       const val = (e as CustomEvent).detail?.value;
       this._update(key, val || "");
     });
+    parent.appendChild(el);
+  }
+
+  private _addSelect(
+    parent: HTMLElement,
+    key: string,
+    current: string,
+    options: readonly string[],
+    lang: string,
+  ): void {
+    const el = document.createElement("ha-select");
+    el.setAttribute("label", t("editor." + key, lang));
+    for (const val of options) {
+      const item = document.createElement("mwc-list-item");
+      item.setAttribute("value", val);
+      if (val === current) item.setAttribute("selected", "");
+      item.textContent = t("editor." + val, lang);
+      el.appendChild(item);
+    }
+    el.addEventListener("selected", (e: Event) => {
+      const target = e.target as HTMLElement & { value?: string };
+      if (target.value) this._update(key, target.value);
+    });
+    el.addEventListener("closed", (e: Event) => e.stopPropagation());
+    parent.appendChild(el);
   }
 
   private _update(key: string, value: unknown): void {
