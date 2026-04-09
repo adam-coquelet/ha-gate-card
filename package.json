@@ -1,19 +1,27 @@
 {
   "name": "gate-card",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Home Assistant Lovelace card for gate control (swing & sliding)",
   "main": "dist/gate-card.js",
   "scripts": {
     "build": "rollup -c rollup.config.mjs",
     "dev": "rollup -c rollup.config.mjs -w"
   },
-  "keywords": ["home-assistant", "lovelace", "hacs", "gate", "portail", "cover"],
+  "keywords": [
+    "home-assistant",
+    "lovelace",
+    "hacs",
+    "gate",
+    "portail",
+    "cover"
+  ],
   "license": "MIT",
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^11.1.6",
     "rollup": "^4.18.0",
+    "sharp": "^0.34.5",
     "tslib": "^2.6.3",
     "typescript": "^5.5.0"
   }
