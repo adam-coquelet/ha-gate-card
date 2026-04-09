@@ -5,6 +5,7 @@ import { sharedStyles } from "./styles";
 import { getState, callCoverService } from "./utils";
 import { t } from "./i18n";
 
+const VERSION = "1.0.1";
 const LOCK_MS = 1500;
 
 class GateCard extends HTMLElement {
@@ -257,3 +258,5 @@ w.customCards.push({
     "Control card for swing and sliding gates / Carte de contrôle pour portails",
   preview: true,
 });
+
+console.info(`%c GATE-CARD %c v${VERSION} `, "background:#171717;color:#fff;border-radius:3px 0 0 3px;padding:2px 0", "background:#f59e0b;color:#171717;border-radius:0 3px 3px 0;padding:2px 0");
