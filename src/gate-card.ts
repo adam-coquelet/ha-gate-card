@@ -5,7 +5,7 @@ import { sharedStyles } from "./styles";
 import { getState, callCoverService } from "./utils";
 import { t } from "./i18n";
 
-const VERSION = "1.0.1";
+const VERSION = "1.0.2";
 const LOCK_MS = 1500;
 
 class GateCard extends HTMLElement {

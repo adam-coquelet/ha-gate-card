@@ -6,7 +6,7 @@ A Lovelace card to control swing and sliding gates in Home Assistant.
 
 Works with **any cover entity** (ESPHome, Shelly, Zigbee2MQTT, Z-Wave, template covers, etc.).
 
-![Gate Card Preview](images/preview.svg)
+![Gate Card Preview](images/preview.png)
 
 ## Features
 
