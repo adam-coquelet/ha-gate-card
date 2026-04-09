@@ -1,6 +1,6 @@
 {
   "name": "gate-card",
-  "version": "1.0.3",
+  "version": "1.0.1",
   "description": "Home Assistant Lovelace card for gate control (swing & sliding)",
   "main": "dist/gate-card.js",
   "scripts": {
