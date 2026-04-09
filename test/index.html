@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gate Card — Test local</title>
+  <style>
+    :root {
+      --primary-text-color: #171717;
+      --secondary-text-color: #666;
+      --card-background-color: #fff;
+      --primary-background-color: #f5f5f5;
+      --secondary-background-color: #fafafa;
+      --divider-color: #eaeaea;
+      --ha-card-header-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #fafafa; color: #171717;
+      padding: 32px 24px;
+      display: flex; flex-direction: column; align-items: center; gap: 32px;
+    }
+    .page-header { text-align: center; }
+    .page-header h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
+    .page-header p { font-size: 13px; color: #666; margin-top: 4px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px; width: 100%; max-width: 1060px;
+    }
+    .test-block { display: flex; flex-direction: column; gap: 10px; }
+    .test-block label {
+      font-size: 11px; font-weight: 600; letter-spacing: .05em;
+      text-transform: uppercase; color: #a1a1a1;
+    }
+    .sim {
+      display: flex; gap: 4px;
+      padding: 4px; background: #f5f5f5; border-radius: 8px; border: 1px solid #eaeaea;
+    }
+    .sim button {
+      flex: 1; padding: 6px 0; border-radius: 6px; border: none;
+      background: transparent; cursor: pointer;
+      font-size: 12px; font-weight: 500; color: #666;
+      transition: all .15s;
+    }
+    .sim button:hover { color: #171717; }
+    .sim button.active {
+      background: #fff; color: #171717;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primary-text-color: #ededed;
+        --secondary-text-color: #888;
+        --card-background-color: #1a1a1a;
+        --primary-background-color: #0a0a0a;
+        --secondary-background-color: #111;
+        --divider-color: #333;
+      }
+      body { background: #0a0a0a; color: #ededed; }
+      .page-header p { color: #888; }
+      .test-block label { color: #555; }
+      .sim { background: #111; border-color: #333; }
+      .sim button { color: #888; }
+      .sim button:hover { color: #ededed; }
+      .sim button.active { background: #1a1a1a; color: #ededed; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h1>Gate Card — Local Preview</h1>
+    <p>Simule les changements d'état pour voir les animations en temps réel.</p>
+  </div>
+
+  <div class="grid">
+    <div class="test-block" data-card="double">
+      <label>Battant double</label>
+      <gate-card id="card-double"></gate-card>
+      <div class="sim">
+        <button data-state="closed">Fermé</button>
+        <button data-state="opening">Ouverture</button>
+        <button data-state="open" class="active">Ouvert</button>
+        <button data-state="closing">Fermeture</button>
+      </div>
+    </div>
+
+    <div class="test-block" data-card="single">
+      <label>Battant simple</label>
+      <gate-card id="card-single"></gate-card>
+      <div class="sim">
+        <button data-state="closed">Fermé</button>
+        <button data-state="opening">Ouverture</button>
+        <button data-state="open" class="active">Ouvert</button>
+        <button data-state="closing">Fermeture</button>
+      </div>
+    </div>
+
+    <div class="test-block" data-card="sliding">
+      <label>Coulissant</label>
+      <gate-card id="card-sliding"></gate-card>
+      <div class="sim">
+        <button data-state="closed">Fermé</button>
+        <button data-state="opening">Ouverture</button>
+        <button data-state="open" class="active">Ouvert</button>
+        <button data-state="closing">Fermeture</button>
+      </div>
+    </div>
+
+    <div class="test-block" data-card="compact">
+      <label>Compact</label>
+      <gate-card id="card-compact"></gate-card>
+      <div class="sim">
+        <button data-state="closed">Fermé</button>
+        <button data-state="open" class="active">Ouvert</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import "../dist/gate-card.js";
+
+    // --- Mock state store ---
+    const entities = {
+      "cover.gate":       { state: "open", attributes: {} },
+      "cover.gate_left":  { state: "open", attributes: {} },
+      "cover.gate_right": { state: "open", attributes: {} },
+      "cover.single":     { state: "open", attributes: {} },
+      "cover.sliding":    { state: "open", attributes: {} },
+      "cover.compact":    { state: "open", attributes: {} },
+    };
+
+    // When main entity is called, propagate to sub-entities
+    const children = {
+      "cover.gate": ["cover.gate_left", "cover.gate_right"],
+    };
+    // When a sub-entity changes, recalculate parent
+    const parent = {
+      "cover.gate_left":  "cover.gate",
+      "cover.gate_right": "cover.gate",
+    };
+
+    function syncParent(parentId) {
+      if (parentId === "cover.gate") {
+        const l = entities["cover.gate_left"].state;
+        const r = entities["cover.gate_right"].state;
+        entities[parentId].state = (l === "open" || r === "open") ? "open" : "closed";
+      }
+    }
+
+    function makeHass() {
+      return {
+        states: JSON.parse(JSON.stringify(entities)),
+        callService(domain, service, data) {
+          const eid = data.entity_id;
+          if (!entities[eid]) return;
+          console.log(`[mock] ${domain}.${service}(${eid})`);
+
+          const newState = service === "open_cover" ? "opening" : "closing";
+          const finalState = service === "open_cover" ? "open" : "closed";
+
+          // Update the target + its children (if any)
+          const targets = [eid, ...(children[eid] || [])];
+          for (const id of targets) {
+            if (entities[id]) entities[id].state = newState;
+          }
+          // Sync parent if a child was changed
+          if (parent[eid]) syncParent(parent[eid]);
+
+          refreshAll();
+
+          // Simulate transition completing
+          setTimeout(() => {
+            for (const id of targets) {
+              if (entities[id]) entities[id].state = finalState;
+            }
+            if (parent[eid]) syncParent(parent[eid]);
+            refreshAll();
+          }, 1200);
+        },
+      };
+    }
+
+    // --- Cards ---
+    const cards = {
+      double: {
+        el: document.getElementById("card-double"),
+        config: {
+          type: "custom:gate-card",
+          entity: "cover.gate",
+          entity_left: "cover.gate_left",
+          entity_right: "cover.gate_right",
+          gate_type: "double_swing",
+          title: "Portail principal",
+        },
+        entities: ["cover.gate", "cover.gate_left", "cover.gate_right"],
+      },
+      single: {
+        el: document.getElementById("card-single"),
+        config: {
+          type: "custom:gate-card",
+          entity: "cover.single",
+          gate_type: "single_swing",
+          swing_side: "left",
+          title: "Portillon",
+        },
+        entities: ["cover.single"],
+      },
+      sliding: {
+        el: document.getElementById("card-sliding"),
+        config: {
+          type: "custom:gate-card",
+          entity: "cover.sliding",
+          gate_type: "sliding",
+          slide_direction: "right",
+          title: "Portail coulissant",
+        },
+        entities: ["cover.sliding"],
+      },
+      compact: {
+        el: document.getElementById("card-compact"),
+        config: {
+          type: "custom:gate-card",
+          entity: "cover.compact",
+          gate_type: "double_swing",
+          title: "Compact",
+          compact: true,
+        },
+        entities: ["cover.compact"],
+      },
+    };
+
+    // Init
+    for (const card of Object.values(cards)) {
+      card.el.setConfig(card.config);
+      card.el.hass = makeHass();
+    }
+
+    function refreshAll() {
+      for (const card of Object.values(cards)) {
+        card.el.hass = makeHass();
+      }
+    }
+
+    // --- Sim buttons ---
+    document.querySelectorAll(".test-block").forEach((block) => {
+      const cardKey = block.dataset.card;
+      if (!cardKey || !cards[cardKey]) return;
+
+      block.querySelectorAll(".sim button").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const state = btn.dataset.state;
+          const card = cards[cardKey];
+          for (const eid of card.entities) {
+            entities[eid].state = state;
+          }
+          refreshAll();
+          block.querySelectorAll(".sim button").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+        });
+      });
+    });
+  </script>
+</body>
+</html>

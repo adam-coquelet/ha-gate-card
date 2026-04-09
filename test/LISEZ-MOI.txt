@@ -1,0 +1,37 @@
+INSTALLATION
+============
+
+1. Copier les fichiers
+   - config/www/portail-card.js        → /config/www/portail-card.js
+   - config/covers.yaml                → /config/covers.yaml
+   - config/input_booleans.yaml        → /config/input_booleans.yaml
+
+2. Dans configuration.yaml, ajouter :
+   template: !include covers.yaml
+   input_boolean: !include input_booleans.yaml
+
+   ⚠️  Si vous avez déjà une section template: ou input_boolean:
+   ne pas dupliquer la clé — fusionner le contenu à la place.
+
+3. Enregistrer la ressource Lovelace
+   Paramètres → Tableaux de bord → Ressources → Ajouter
+   URL  : /local/portail-card.js
+   Type : Module JavaScript
+
+4. Redémarrer HA
+
+5. Ajouter la carte dans votre dashboard (carte manuelle) :
+   type: custom:portail-card
+   title: Portail
+   entity_global: cover.portail
+   entity_left:   cover.portail_gauche
+   entity_right:  cover.portail_droit
+
+   # Mode compact (sans animation) :
+   type: custom:portail-card
+   title: Portail
+   compact: true
+   entity_global: cover.portail
+   entity_left:   cover.portail_gauche
+   entity_right:  cover.portail_droit
+

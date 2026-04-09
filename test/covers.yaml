@@ -1,0 +1,65 @@
+# covers.yaml — syntaxe moderne (HA 2024+)
+# À inclure via configuration.yaml :
+#
+#   template: !include covers.yaml
+#
+# Remplace les actions par tes vraies commandes quand ton relais sera branché.
+
+- cover:
+  - name: "Portail gauche"
+    device_class: gate
+    state: "{{ states('input_boolean.portail_gauche_etat') }}"
+    open_cover:
+      - action: persistent_notification.create
+        data:
+          message: "TODO: brancher l'action OUVRIR battant gauche"
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.portail_gauche_etat
+    close_cover:
+      - action: persistent_notification.create
+        data:
+          message: "TODO: brancher l'action FERMER battant gauche"
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.portail_gauche_etat
+
+  - name: "Portail droit"
+    device_class: gate
+    state: "{{ states('input_boolean.portail_droit_etat') }}"
+    open_cover:
+      - action: persistent_notification.create
+        data:
+          message: "TODO: brancher l'action OUVRIR battant droit"
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.portail_droit_etat
+    close_cover:
+      - action: persistent_notification.create
+        data:
+          message: "TODO: brancher l'action FERMER battant droit"
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.portail_droit_etat
+
+  - name: "Portail"
+    device_class: gate
+    state: >
+      {% if is_state('input_boolean.portail_gauche_etat', 'on') or
+            is_state('input_boolean.portail_droit_etat',  'on') %}
+        open
+      {% else %}
+        closed
+      {% endif %}
+    open_cover:
+      - action: cover.open_cover
+        target:
+          entity_id:
+            - cover.portail_gauche
+            - cover.portail_droit
+    close_cover:
+      - action: cover.close_cover
+        target:
+          entity_id:
+            - cover.portail_gauche
+            - cover.portail_droit

@@ -1,0 +1,9 @@
+# input_booleans.yaml
+# États simulés pour tester la carte avant d'avoir le vrai hardware
+# À supprimer quand ton relais sera branché
+
+portail_gauche_etat:
+  name: "État portail gauche"
+
+portail_droit_etat:
+  name: "État portail droit"
