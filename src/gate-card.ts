@@ -41,9 +41,6 @@ class GateCard extends HTMLElement {
   }
 
   setConfig(config: GateCardConfig): void {
-    if (!config.entity) {
-      throw new Error("Please define an 'entity' (cover entity)");
-    }
     this.config = {
       gate_type: "double_swing",
       language: "auto",
@@ -57,6 +54,11 @@ class GateCard extends HTMLElement {
 
   set hass(hass: HomeAssistant) {
     this._hass = hass;
+    if (!this.config.entity) {
+      this.shadowRoot!.innerHTML = `<div style="padding:20px;font-size:13px;color:var(--secondary-text-color,#666);">Select a cover entity in the card editor.</div>`;
+      this._built = false;
+      return;
+    }
     if (!this._built) {
       this._build();
     }
